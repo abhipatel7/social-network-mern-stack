@@ -1,24 +1,85 @@
 import { NextPage } from 'next';
-import { ChangeEvent, useState } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
+import { Button, Form, Input, Modal, Select } from 'antd';
+import Link from 'next/link';
+import { Rule } from 'rc-field-form/lib/interface';
+
+const { Item, useForm } = Form;
+
+const { Option } = Select;
+
+const validationErrors: {
+  [key: string]: Rule[];
+} = {
+  name: [{ required: true, message: 'Name is required!' }],
+  email: [
+    {
+      required: true,
+      message: 'Email is required!',
+    },
+    {
+      type: 'email',
+      message: 'Please enter valid email!',
+    },
+  ],
+  password: [
+    {
+      min: 6,
+      max: 64,
+      message: 'Password must be between 6 to 64 characters!',
+    },
+    {
+      required: true,
+      message: 'Password is required!',
+    },
+  ],
+  answer: [
+    { required: true, message: 'Please enter an answer!' },
+    ({ getFieldValue }) => ({
+      validator(_, value) {
+        if (value && !getFieldValue('question')) {
+          return Promise.reject(new Error('You must select a question first!'));
+        }
+      },
+    }),
+  ],
+};
+
+const options = [
+  {
+    value: 'question1',
+    label: 'What is your favourite color?',
+  },
+  {
+    value: 'question2',
+    label: "What is your best friend's name?",
+  },
+  {
+    value: 'question3',
+    label: 'What city you were born?',
+  },
+];
 
 const Register: NextPage = () => {
-  const [values, setValues] = useState({
-    name: '',
-    email: '',
-    password: '',
-    secret: '',
-  });
+  const [showModal, setShowModal] = useState(false);
 
-  const onChange = (event: ChangeEvent<HTMLInputElement>) =>
-    setValues({ ...values, [event.target.name]: event.target.value });
+  const [form] = useForm();
 
-  const onSubmit = (event: ChangeEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    axios
-      .post('http://localhost:8000/api/register', values)
-      .then((res) => console.log(res))
-      .catch((err) => console.log(err));
+  const onSubmit = async () => {
+    const { name, email, password, secret } = form.getFieldsValue();
+    try {
+      const { data } = await axios.post('http://localhost:8000/api/register', {
+        name,
+        email,
+        password,
+        secret,
+      });
+      setShowModal(data?.ok);
+    } catch (error: any) {
+      toast.error(error.response.data);
+    }
   };
 
   return (
@@ -31,79 +92,63 @@ const Register: NextPage = () => {
 
       <div className="row py-5">
         <div className="col-md-6 offset-md-3">
-          <form onSubmit={onSubmit}>
-            <div className="form-group p-2">
-              <small>
-                <label className="text-muted">Your Name</label>
-              </small>
-              <input
-                value={values.name}
-                name="name"
-                onChange={onChange}
-                type="text"
-                className="form-control"
-                placeholder="Enter Name"
-              />
-            </div>
-            <div className="form-group p-2">
-              <small>
-                <label className="text-muted">Email Address</label>
-              </small>
-              <input
-                value={values.email}
-                name="email"
-                onChange={onChange}
-                type="email"
-                className="form-control"
-                placeholder="Enter email"
-              />
-            </div>
-            <div className="form-group p-2">
-              <small>
-                <label className="text-muted">Password</label>
-              </small>
-              <input
-                value={values.password}
-                onChange={onChange}
-                name="password"
-                type="password"
-                className="form-control"
-                placeholder="Enter password"
-              />
-            </div>
-
-            <div className="form-group p-2">
-              <small>
-                <label className="text-muted">Pick a question</label>
-              </small>
-              <select className="form-control">
-                <option>What is your favourite color?</option>
-                <option>{"What is your best friend's name?"}</option>
-                <option>What city you were born?</option>
-              </select>
-
-              <small className="form-text text-muted">
-                You can use this to reset your password if forgotten.
-              </small>
-            </div>
-
-            <div className="form-group p-2">
-              <input
-                value={values.secret}
-                onChange={onChange}
-                name="secret"
-                type="text"
-                className="form-control"
-                placeholder="Write your answer here"
-              />
-            </div>
-
-            <div className="form-group p-2">
-              <button className="btn btn-primary col-12">Submit</button>
-            </div>
-          </form>
+          <Form layout="vertical" form={form} scrollToFirstError>
+            <Item label="Name" name="name" rules={validationErrors.name}>
+              <Input placeholder="Enter Name" />
+            </Item>
+            <Item
+              label="Email"
+              name="email"
+              required
+              rules={validationErrors.email}
+            >
+              <Input placeholder="Enter Email" />
+            </Item>
+            <Item
+              label="Password"
+              name="password"
+              required
+              rules={validationErrors.password}
+            >
+              <Input.Password placeholder="Enter Name" />
+            </Item>
+            <Item
+              label="Select a Question"
+              name="question"
+              help="You can use this to reset your password if forgotten."
+              required
+            >
+              <Select placeholder="Pick a question">
+                {options.map(({ value, label }) => (
+                  <Option key={value} value={value}>
+                    {label}
+                  </Option>
+                ))}
+              </Select>
+            </Item>
+            <Item label="Answer" name="secret" rules={validationErrors.secret}>
+              <Input placeholder="Enter Answer" />
+            </Item>
+            <Item wrapperCol={{ xs: 24 }}>
+              <Button onClick={onSubmit} htmlType="submit" className="col-12">
+                Submit
+              </Button>
+            </Item>
+          </Form>
         </div>
       </div>
+      <Modal
+        title="Congratulations!"
+        centered
+        visible={showModal}
+        onCancel={() => setShowModal(false)}
+        footer={null}
+      >
+        <p>{"You've successfully registered!"}</p>
+        <Link href="/login">
+          <a className="btn btn-sm btn-primary">Login</a>
+        </Link>
+      </Modal>
     </div>
   );
 };
