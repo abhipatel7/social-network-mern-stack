@@ -8,13 +8,13 @@ const NavBar: FC = () => {
       style={{ backgroundColor: 'blue' }}
     >
       <Link href="/">
-        <a className="nav-link text-light">Home</a>
+        <a className="nav-link text-light logo">Home</a>
       </Link>
       <Link href="/login">
-        <a className="nav-link text-light">Login</a>
+        <a className="nav-link text-light logo">Login</a>
       </Link>
       <Link href="/register">
-        <a className="nav-link text-light">Register</a>
+        <a className="nav-link text-light logo">Register</a>
       </Link>
     </nav>
   );

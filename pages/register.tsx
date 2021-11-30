@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { Button, Form, Input, Modal, Select } from 'antd';
 import Link from 'next/link';
 import { Rule } from 'rc-field-form/lib/interface';
+import { SyncOutlined } from '@ant-design/icons';
 
 const { Item, useForm } = Form;
 
@@ -64,27 +65,39 @@ const options = [
 
 const Register: NextPage = () => {
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [form] = useForm();
 
-  const onSubmit = async () => {
-    const { name, email, password, secret } = form.getFieldsValue();
-    try {
-      const { data } = await axios.post('http://localhost:8000/api/register', {
-        name,
-        email,
-        password,
-        secret,
-      });
-      setShowModal(data?.ok);
-    } catch (error: any) {
-      toast.error(error.response.data);
-    }
+  const onSubmit = () => {
+    setLoading(true);
+    form
+      .validateFields()
+      .then(async ({ name, email, password, secret }) => {
+        try {
+          const { data } = await axios.post(
+            `${process.env.NEXT_PUBLIC_API}/register`,
+            {
+              name,
+              email,
+              password,
+              secret,
+            }
+          );
+          setShowModal(data?.ok);
+          form.resetFields();
+        } catch (error: any) {
+          toast.error(error.response.data);
+        } finally {
+          setLoading(false);
+        }
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
     <div className="container-fluid">
-      <div className="row py-5 bg-secondary text-light">
+      <div className="row py-5 bg-default-img text-light">
         <div className="col text-center">
           <h1>Register Page</h1>
         </div>
@@ -92,7 +105,13 @@ const Register: NextPage = () => {
 
       <div className="row py-5">
         <div className="col-md-6 offset-md-3">
-          <Form layout="vertical" form={form} scrollToFirstError>
+          <Form
+            validateTrigger={['onChange', 'onBlur']}
+            layout="vertical"
+            form={form}
+            scrollToFirstError
+            autoComplete="off"
+          >
             <Item label="Name" name="name" rules={validationErrors.name}>
               <Input placeholder="Enter Name" />
             </Item>
@@ -131,7 +150,7 @@ const Register: NextPage = () => {
             </Item>
             <Item wrapperCol={{ xs: 24 }}>
               <Button onClick={onSubmit} htmlType="submit" className="col-12">
-                Submit
+                {loading ? <SyncOutlined spin /> : 'Submit'}
               </Button>
             </Item>
           </Form>
